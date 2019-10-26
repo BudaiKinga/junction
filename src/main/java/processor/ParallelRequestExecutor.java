@@ -1,6 +1,7 @@
 package processor;
 
 import jsonparsing.JsonParser;
+import model.Observation;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -90,7 +91,7 @@ public class ParallelRequestExecutor {
         Date startDate = new Date(Timestamp.valueOf(startTime).getTime());
         Date endDate = new Date(Timestamp.valueOf(endTime).getTime());
 
-        for (Date d = startDate; d.before(endDate); DateUtils.addMinutes(d, jump)) {
+        for (Date d = startDate; d.before(endDate); d=DateUtils.addMinutes(d, jump)) {
             Request coarseRawRequest = new RawRequest();
             coarseRawRequest.setCommand("list");
             coarseRawRequest.setTimeStart(d);
@@ -103,9 +104,11 @@ public class ParallelRequestExecutor {
 
     public static void main(String[] args) throws Exception {
         long startTime = System.currentTimeMillis();
-        List<StationPojo> stations = JsonParser.getStations();
+        List<StationPojo> stationPojos = JsonParser.getStations();
+        Map<String, String> stations = convertToStationPojos(stationPojos);
 
-        List<Request> requests = buildCoarseGrainRequests("2019-08-01 08:00:00", "2019-08-02 08:00:00", 30, 3);
+        int jump = 30;
+        List<Request> requests = buildCoarseGrainRequests("2019-08-01 08:00:00", "2019-08-01 16:00:00", jump, 3);
 
         ParallelRequestExecutor exec = new ParallelRequestExecutor(100);
 
@@ -113,23 +116,50 @@ public class ParallelRequestExecutor {
 
         List<RawPojo> rawPojos = JsonParser.getRaw(jsonResponses);
 
+        Set<Observation> observations = getObservations(rawPojos, jump, stations);
 
-        //Map<String, Set<String>> checkInCounter = countCheckIns(rawPojos);
-
-        //topTenVisited(stations, checkInCounter);
-       // writeTocsv(checkInCounter, stations);
+        writeTocsv(observations);
 
         long endTime = System.currentTimeMillis();
         System.out.println("time: " + (endTime - startTime));
 
     }
 
-    private static void writeTocsv(Map<String, Set<String>> checkInCounter, Set<StationPojo> stationPojos) throws IOException {
+    private static Map<String, String> convertToStationPojos(List<StationPojo> stationPojos) {
+        Map<String, String> stations = new HashMap<>();
+        for (StationPojo sp : stationPojos) {
+            stations.put(sp.getSerial(), sp.getDescription());
+        }
+        return stations;
+    }
+
+    private static Set<Observation> getObservations(List<RawPojo> rawPojos, int jump,  Map<String, String> stationPojos) {
+        Set<Observation> obs = new HashSet<>();
+        for (RawPojo pojo : rawPojos) {
+            obs.add(convertToObs(pojo, jump, stationPojos));
+        }
+        return obs;
+    }
+
+    private static Observation convertToObs(RawPojo pojo, int jump, Map<String, String> stationPojos) {
+        Observation observation = new Observation();
+        observation.setRawHash(pojo.getHash());
+        observation.setLocation(stationPojos.get(pojo.getSerial()));
+        Date pojoTime = new Date(pojo.getTime().getTime());
+        pojoTime.setSeconds(0);
+        pojoTime.setMinutes(pojoTime.getMinutes() - (pojoTime.getMinutes() % jump));
+        observation.setStartDate(pojoTime);
+        return observation;
+    }
+
+    private static void writeTocsv(Set<Observation> observations) throws IOException {
         File csv = new File("data1.csv");
         BufferedWriter wr = new BufferedWriter(new FileWriter(csv));
         wr.write("description, time, nrVisitors\n");
-
-
+        for (Observation o : observations) {
+            wr.write(o + "\n");
+        }
+        wr.close();
     }
 
     private static void topTenVisited(List<StationPojo> stations, Map<String, Set<String>> checkInCounter) {
