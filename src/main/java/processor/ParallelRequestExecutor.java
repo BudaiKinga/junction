@@ -6,24 +6,22 @@ import utils.CallableFactory;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class ParallelRequestExecutor {
 
     private final ExecutorService pool;
+    public static final String STOP = "stop";
+
 
     public ParallelRequestExecutor(int poolSize) {
         pool = Executors.newFixedThreadPool(poolSize);
     }
 
-    public List<String> execute(List<Request> requests) throws InterruptedException {
-        List<Callable<String>> callables = CallableFactory.buildCallables(requests);
-        List<Future<String>> results = pool.invokeAll(callables);
+    public void execute(List<Request> requests, BlockingQueue<String> retrievedJsons) throws InterruptedException {
+        List<Callable<Void>> callables = CallableFactory.buildCallables(requests, retrievedJsons);
+        pool.invokeAll(callables);
         pool.shutdown();
-
-        return results.stream()
-                .map(getResponseFromFuture())
-                .collect(Collectors.toList());
+        retrievedJsons.add(STOP);
     }
 
     private Function<Future<String>, String> getResponseFromFuture() {

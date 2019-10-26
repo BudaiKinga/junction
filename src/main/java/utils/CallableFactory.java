@@ -9,21 +9,22 @@ import request.Request;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class CallableFactory {
-    static AtomicInteger counter = new AtomicInteger(0);
+    private static AtomicInteger counter = new AtomicInteger(0);
 
-    public static List<Callable<String>> buildCallables(List<Request> requests) {
-        List<Callable<String>> callables = new ArrayList<>();
+    public static List<Callable<Void>> buildCallables(List<Request> requests, BlockingQueue<String> retrievedJsons) {
+        List<Callable<Void>> callables = new ArrayList<>();
         for (Request request : requests) {
-            callables.add(createCallable(request));
+            callables.add(createCallable(request, retrievedJsons));
         }
         return callables;
     }
 
-    private static Callable<String> createCallable(Request request) {
+    private static Callable<Void> createCallable(Request request, BlockingQueue<String> retrievedJsons) {
         return () -> {
             HttpPost post = request.postRequest();
 
@@ -32,7 +33,8 @@ public class CallableFactory {
             HttpResponse response = client.execute(post);
             System.out.println("Received response for request " + request.getTimeStart() + " counter " + counter.getAndIncrement());
 
-            return EntityUtils.toString(response.getEntity());
+            retrievedJsons.add(EntityUtils.toString(response.getEntity()));
+            return null;
         };
     }
 }
