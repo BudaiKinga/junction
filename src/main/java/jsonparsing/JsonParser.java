@@ -6,6 +6,7 @@ import pojo.Station;
 
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public final class JsonParser {
@@ -18,16 +19,19 @@ public final class JsonParser {
         return stationDataJsonModel.getList();
     }
 
-    public static List<Heartbeat> getHeartBeats(String json) {
+    private static List<Heartbeat> getHeartBeats(String json) {
+        if (json == null) {
+            return Collections.emptyList();
+        }
         RawDataJsonModel rawDataJsonModel = GSON.fromJson(json, RawDataJsonModel.class);
-        return rawDataJsonModel.getRaw();
+        return rawDataJsonModel.getRaw() == null ? Collections.emptyList() : rawDataJsonModel.getRaw();
     }
 
     public static List<Heartbeat> getHeartBeats(List<String> jsons) {
         long start = System.currentTimeMillis();
 
         List<Heartbeat> result = new ArrayList<>();
-        for (String json: jsons) {
+        for (String json : jsons) {
             result.addAll(getHeartBeats(json));
         }
 
