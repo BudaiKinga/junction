@@ -143,7 +143,7 @@ public class Benchmark {
 
         Set<Observation> observations = getObservations(heartbeats, JUMP_MINUTES, stationsSerialToDescription);
 
-        writeTocsv(observations);
+        writeTocsv(observations, START_TIME_STRING);
 
         long endTime = System.currentTimeMillis();
         System.out.println("time: " + (endTime - startTime));
