@@ -64,8 +64,8 @@ public class ParallelRequestExecutor {
         for (int i = 0; i < iteration; i++) {
             Request rSmall = new RawRequest();
             rSmall.setCommand(r.getCommand());
-            rSmall.setTimeStart(new Date(start + i*20*1000));
-            rSmall.setTimeStop(new Date(start + (i+1)*20000 -1000));
+            rSmall.setTimeStart(new Date(start + i * 20 * 1000));
+            rSmall.setTimeStop(new Date(start + (i + 1) * 20000 - 1000));
             list.add(rSmall);
         }
         return list;
@@ -103,16 +103,15 @@ public class ParallelRequestExecutor {
             raws.addAll(JsonParser.getRaw(r));
         }
 
-        Map<String, Integer> checkInCounter = new HashMap<>();
+        Map<String, Set<String>> checkInCounter = new HashMap<>();
 
         for (RawPojo raw : raws) {
-            Integer counter = checkInCounter.get(raw.getSerial());
-            if (counter == null) {
-                counter = 1;
-            } else {
-                counter++;
+            Set<String> hashes = checkInCounter.get(raw.getSerial());
+            if (hashes == null) {
+                hashes = new HashSet<>();
             }
-            checkInCounter.put(raw.getSerial(), counter);
+            hashes.add(raw.getHash());
+            checkInCounter.put(raw.getSerial(), hashes);
         }
         // top ten
         int nrMax = 10;
@@ -120,15 +119,14 @@ public class ParallelRequestExecutor {
             int max = 0;
             StationPojo sMax = null;
             for (StationPojo s : stations) {
-                System.out.println(s.getDescription());
-                int count = checkInCounter.get(s.getSerial());
-                if (count > max) {
+                Set<String> r = checkInCounter.get(s.getSerial());
+                if (r != null && r.size() > max) {
                     sMax = s;
-                    max = count;
+                    max = r.size();
                 }
             }
             System.out.println("Max" + i + ": " + sMax.getDescription() + " " + max);
-            checkInCounter.put(sMax.getDescription(), 0);
+            checkInCounter.put(sMax.getSerial(), new HashSet<>());
         }
 
     }
