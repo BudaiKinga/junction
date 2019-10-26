@@ -15,9 +15,9 @@ import java.util.Date;
 @EqualsAndHashCode
 public class Observation {
 
-    public Date startDate;
-    public String location;
-    public String rawHash;
+    private Date startDate;
+    private String location;
+    private String rawHash;
 
     @Override
     public String toString() {
