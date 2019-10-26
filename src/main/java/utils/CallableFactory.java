@@ -10,8 +10,10 @@ import request.Request;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CallableFactory {
+    static AtomicInteger counter = new AtomicInteger(0);
 
     public static List<Callable<String>> buildCallables(List<Request> requests) {
         List<Callable<String>> callables = new ArrayList<>();
@@ -28,6 +30,8 @@ public class CallableFactory {
             CloseableHttpClient client = HttpClients.createDefault();
 
             HttpResponse response = client.execute(post);
+            System.out.println("Received response for request " + request.getTimeStart() + " counter " + counter.getAndIncrement());
+
             return EntityUtils.toString(response.getEntity());
         };
     }

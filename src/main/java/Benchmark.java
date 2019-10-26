@@ -21,7 +21,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-import static utils.CsvWriter.writeTocsv;
+import static utils.IOUtil.writeTocsv;
 
 public class Benchmark {
 
@@ -178,6 +178,7 @@ public class Benchmark {
     }
 
     public static Set<Observation> getObservations(List<Heartbeat> heartbeats, int jump, Map<String, String> stationPojos) {
+        System.out.println("Converting to obs");
         Set<Observation> obs = new HashSet<>();
         for (Heartbeat pojo : heartbeats) {
             obs.add(convertToObs(pojo, jump, stationPojos));

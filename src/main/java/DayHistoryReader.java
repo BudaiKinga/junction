@@ -3,7 +3,7 @@ import model.Observation;
 import pojo.Heartbeat;
 import processor.ParallelRequestExecutor;
 import request.Request;
-import utils.CsvWriter;
+import utils.IOUtil;
 
 import java.util.List;
 import java.util.Set;
@@ -23,6 +23,6 @@ public class DayHistoryReader {
         List<Heartbeat> heartBeats = JsonParser.getHeartBeats(responses);
         Set<Observation> observations = Benchmark.getObservations(heartBeats, 10, Benchmark.getStationSerialToDescriptionMap());
 
-        CsvWriter.writeTocsv(observations);
+        IOUtil.writeTocsv(observations);
     }
 }
