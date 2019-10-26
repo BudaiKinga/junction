@@ -1,17 +1,19 @@
 package jsonparsing;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import pojo.Heartbeat;
 import pojo.Station;
 
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 public final class JsonParser {
 
-    private static final Gson GSON = new Gson();
+    private static final Gson GSON = new GsonBuilder().setDateFormat("yyyy-MM-dd'T'hh:mm:ss'Z'").create();
 
     public static List<Station> getStations() throws Exception {
         FileReader jsonFileReader = new FileReader("src\\main\\resources\\station.json");
@@ -29,10 +31,16 @@ public final class JsonParser {
 
     public static List<Heartbeat> getHeartBeats(List<String> jsons) {
         long start = System.currentTimeMillis();
+        System.out.println("Parsing " + jsons.size() + " jsons");
 
         List<Heartbeat> result = new ArrayList<>();
-        for (String json : jsons) {
+        Iterator<String> iterator = jsons.iterator();
+        int i = 0;
+        while (iterator.hasNext()) {
+            String json = iterator.next();
             result.addAll(getHeartBeats(json));
+            System.out.println("json " + (i++) + " processed");
+            iterator.remove();
         }
 
         long end = System.currentTimeMillis();

@@ -177,11 +177,16 @@ public class Benchmark {
         return stations;
     }
 
-    public static Set<Observation> getObservations(List<Heartbeat> heartbeats, int jump, Map<String, String> stationPojos) {
+    static Set<Observation> getObservations(List<Heartbeat> heartbeats, int jump, Map<String, String> stationPojos) {
         System.out.println("Converting to obs");
         Set<Observation> obs = new HashSet<>();
-        for (Heartbeat pojo : heartbeats) {
-            obs.add(convertToObs(pojo, jump, stationPojos));
+
+        Iterator<Heartbeat> iterator = heartbeats.iterator();
+        int i = 0;
+        while (iterator.hasNext()) {
+            obs.add(convertToObs(iterator.next(), jump, stationPojos));
+            System.out.println("observation " + (i++) + " converted");
+            iterator.remove();
         }
         return obs;
     }
