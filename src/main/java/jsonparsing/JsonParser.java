@@ -12,7 +12,7 @@ public final class JsonParser {
     private static final Gson GSON = new Gson();
 
     public static List<StationPojo> getStations() throws Exception {
-        FileReader jsonFileReader = new FileReader("..\\station_json.json");
+        FileReader jsonFileReader = new FileReader("src\\main\\resources\\station.json");
         StationDataJsonModel stationDataJsonModel = GSON.fromJson(jsonFileReader, StationDataJsonModel.class);
         return stationDataJsonModel.getList();
     }
