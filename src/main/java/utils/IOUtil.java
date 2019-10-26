@@ -7,11 +7,14 @@ import java.text.ParseException;
 import java.util.HashSet;
 import java.util.Set;
 
+import static request.RequestDateFormatter.getFormattedDateForFile;
+
 public class IOUtil {
-    public static void writeTocsv(Set<Observation> observations, String time) throws IOException {
-        File csv = new File("data_" + time + ".csv");
+    public static void writeTocsv(Set<Observation> observations, String time) throws IOException, ParseException {
+
+        File csv = new File("data_" + getFormattedDateForFile(time) + ".csv");
         BufferedWriter wr = new BufferedWriter(new FileWriter(csv));
-        wr.write("description, time, nrVisitors\n");
+        wr.write("when, who, where\n");
         for (Observation o : observations) {
             wr.write(o + "\n");
         }

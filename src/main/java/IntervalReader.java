@@ -20,7 +20,7 @@ public class IntervalReader {
     public static void main(String[] args) throws Exception {
         // 10s peek whole day coverage
         String START_TIME_STRING = "2019-08-01 08:00:00";
-        String END_TIME_STRING = "2019-08-01 20:00:00";
+        String END_TIME_STRING = "2019-08-01 08:01:00";
         List<Request> requests = Benchmark.buildCoarseGrainRequestsBySecond(START_TIME_STRING, END_TIME_STRING, 10, 10);
 
         BlockingQueue<String> retrievedJsons = new LinkedBlockingQueue<>();
