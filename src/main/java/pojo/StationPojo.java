@@ -7,15 +7,15 @@ import lombok.Setter;
 @Setter
 public class StationPojo {
     private String serial;
-    private float latitude;
-    private float longitude;
-    private String description;
-    private String group;
-    private String alas;
     private String address;
-    private String postalCode;
+    private String postalcode;
     private String city;
     private String country;
+    private String description;
+    private float latitude;
+    private float longitude;
+    private String group;
+    private String alias;
 
 
 }
