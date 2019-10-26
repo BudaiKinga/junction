@@ -137,7 +137,10 @@ public class Benchmark {
 
         List<Request> requests = buildCoarseGrainRequestsByMinute(START_TIME_STRING, END_TIME_STRING, JUMP_MINUTES, PEEK_MINUTES);
 
-        List<String> jsonResponses = executor.execute(requests);
+        BlockingQueue<String> blockingQueue = new LinkedBlockingQueue<>();
+        List<String> jsonResponses = new ArrayList<>();
+        // should be corrected
+        executor.execute(requests, blockingQueue);
 
         List<Heartbeat> heartbeats = JsonParser.getHeartBeats(jsonResponses);
 
