@@ -8,8 +8,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class IOUtil {
-    public static void writeTocsv(Set<Observation> observations) throws IOException {
-        File csv = new File("data1.csv");
+    public static void writeTocsv(Set<Observation> observations, String time) throws IOException {
+        File csv = new File("data_" + time + ".csv");
         BufferedWriter wr = new BufferedWriter(new FileWriter(csv));
         wr.write("description, time, nrVisitors\n");
         for (Observation o : observations) {

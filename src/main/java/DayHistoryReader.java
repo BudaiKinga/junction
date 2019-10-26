@@ -15,7 +15,7 @@ public class DayHistoryReader {
     public static void main(String[] args) throws Exception {
         // 10s peek whole day coverage
         String START_TIME_STRING = "2019-08-01 08:00:00";
-        String END_TIME_STRING = "2019-08-01 08:00:20";
+        String END_TIME_STRING = "2019-08-01 20:00:00";
         List<Request> requests = Benchmark.buildCoarseGrainRequestsBySecond(START_TIME_STRING, END_TIME_STRING, 10, 10);
 
         List<String> responses = executor.execute(requests);
@@ -23,6 +23,6 @@ public class DayHistoryReader {
         List<Heartbeat> heartBeats = JsonParser.getHeartBeats(responses);
         Set<Observation> observations = Benchmark.getObservations(heartBeats, 10, Benchmark.getStationSerialToDescriptionMap());
 
-        IOUtil.writeTocsv(observations);
+        IOUtil.writeTocsv(observations, START_TIME_STRING);
     }
 }
