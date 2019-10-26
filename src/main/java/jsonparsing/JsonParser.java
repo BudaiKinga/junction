@@ -5,7 +5,9 @@ import pojo.RawPojo;
 import pojo.StationPojo;
 
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class JsonParser {
 
@@ -20,5 +22,13 @@ public final class JsonParser {
     public static List<RawPojo> getRaw(String json) {
         RawDataJsonModel rawDataJsonModel = GSON.fromJson(json, RawDataJsonModel.class);
         return rawDataJsonModel.getRaw();
+    }
+
+    public static List<RawPojo> getRaw(List<String> jsons) {
+        List<RawPojo> result = new ArrayList<>();
+        for (String json: jsons) {
+            result.addAll(getRaw(json));
+        }
+        return result;
     }
 }

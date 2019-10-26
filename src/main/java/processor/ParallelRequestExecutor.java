@@ -32,19 +32,17 @@ public class ParallelRequestExecutor {
             callables.add(createCallable(request));
 
         List<Future<String>> results = pool.invokeAll(callables);
+        pool.shutdown();
 
-        List<String> responses = results.stream().map(res -> {
+        return results.stream().map(res -> {
             try {
                 return res.get();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
             System.out.println("Out of time...");
             return null;
         }).collect(Collectors.toList());
-        return responses;
     }
 
     private List<Request> getSmallWindowRequests(List<Request> requests) {
@@ -65,7 +63,7 @@ public class ParallelRequestExecutor {
             Request rSmall = new RawRequest();
             rSmall.setCommand(r.getCommand());
             rSmall.setTimeStart(new Date(start + i * 20 * 1000));
-            rSmall.setTimeStop(new Date(start + (i + 1) * 20000 - 1000));
+            rSmall.setTimeStop(new Date(start + (i * 20000 + 2000)));
             list.add(rSmall);
         }
         return list;
@@ -82,38 +80,36 @@ public class ParallelRequestExecutor {
         };
     }
 
-    public static void main(String[] args) throws Exception {
-        List<StationPojo> stations = JsonParser.getStations();
-        Request raw1 = new RawRequest();
-        raw1.setCommand("list");
-        raw1.setTimeStart(new Date(Timestamp.valueOf("2019-08-01 12:00:00").getTime()));
-        raw1.setTimeStop(new Date(Timestamp.valueOf("2019-08-01 12:01:00").getTime()));
-        List<Request> requests = new ArrayList<>(Arrays.asList(
-                raw1
-        ));
+    private static List<Request> buildCoarseGrainRequests() {
+        Request coarseRawRequest = new RawRequest();
+        coarseRawRequest.setCommand("list");
+        coarseRawRequest.setTimeStart(new Date(Timestamp.valueOf("2019-08-01 12:00:00").getTime()));
+        coarseRawRequest.setTimeStop(new Date(Timestamp.valueOf("2019-08-01 12:01:00").getTime()));
+        return new ArrayList<>(Arrays.asList(coarseRawRequest));
+    }
 
+    public static void main(String[] args) throws Exception {
+        long startTime = System.currentTimeMillis();
+        List<StationPojo> stations = JsonParser.getStations();
+
+        List<Request> requests = buildCoarseGrainRequests();
 
         ParallelRequestExecutor exec = new ParallelRequestExecutor(3);
 
-        List<String> res = exec.execute(requests);
+        List<String> jsonResponses = exec.execute(requests);
 
-        // refactor -> move to jsonParser
-        List<RawPojo> raws = new ArrayList<>();
-        for (String r : res) {
-            raws.addAll(JsonParser.getRaw(r));
-        }
+        List<RawPojo> rawPojos = JsonParser.getRaw(jsonResponses);
 
-        Map<String, Set<String>> checkInCounter = new HashMap<>();
+        Map<String, Set<String>> checkInCounter = countCheckIns(rawPojos);
 
-        for (RawPojo raw : raws) {
-            Set<String> hashes = checkInCounter.get(raw.getSerial());
-            if (hashes == null) {
-                hashes = new HashSet<>();
-            }
-            hashes.add(raw.getHash());
-            checkInCounter.put(raw.getSerial(), hashes);
-        }
-        // top ten
+        topTenVisited(stations, checkInCounter);
+
+        long endTime = System.currentTimeMillis();
+        System.out.println("time: " + (endTime - startTime));
+
+    }
+
+    private static void topTenVisited(List<StationPojo> stations, Map<String, Set<String>> checkInCounter) {
         int nrMax = 10;
         for (int i = 0; i < nrMax; i++) {
             int max = 0;
@@ -128,6 +124,19 @@ public class ParallelRequestExecutor {
             System.out.println("Max" + i + ": " + sMax.getDescription() + " " + max);
             checkInCounter.put(sMax.getSerial(), new HashSet<>());
         }
+    }
 
+    private static Map<String, Set<String>> countCheckIns(List<RawPojo> rawPojos) {
+        Map<String, Set<String>> checkInCounter = new HashMap<>();
+
+        for (RawPojo raw : rawPojos) {
+            Set<String> hashes = checkInCounter.get(raw.getSerial());
+            if (hashes == null) {
+                hashes = new HashSet<>();
+            }
+            hashes.add(raw.getHash());
+            checkInCounter.put(raw.getSerial(), hashes);
+        }
+        return checkInCounter;
     }
 }
