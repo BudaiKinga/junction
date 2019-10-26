@@ -31,6 +31,44 @@ public class ParallelRequestExecutor {
     private static final int PEEK_MINUTES = 1;
 
     public static void main(String[] args) throws Exception {
+//        checkResponseGrowth();
+        buildStatistics();
+
+    }
+
+    private static void checkResponseGrowth() throws IOException {
+        File csv = new File("responseGrowth.csv");
+        BufferedWriter wr = new BufferedWriter(new FileWriter(csv));
+        wr.write("peek, time, total, distinct\n");
+
+        for (int peekSeconds = 1; peekSeconds < 30; peekSeconds++) {
+            long start = System.currentTimeMillis();
+            Request r = new RawRequest();
+            r.setCommand("list");
+            long time = Timestamp.valueOf("2019-08-01 08:00:00").getTime();
+            r.setTimeStart(new Date(time));
+            r.setTimeStop(new Date(time + peekSeconds * 1000));
+
+            HttpPost post = r.postRequest();
+            CloseableHttpClient client = HttpClients.createDefault();
+            HttpResponse response = client.execute(post);
+
+            String jsonString = EntityUtils.toString(response.getEntity());
+            List<Heartbeat> heartbeats = JsonParser.getHeartBeats(jsonString);
+            long end = System.currentTimeMillis();
+
+            long distinct = heartbeats.stream().map(Heartbeat::getHash).distinct().count();
+            long elapsed = (end - start) / 1000;
+            System.out.println("peek: " + peekSeconds +
+                    ", time: " + elapsed +
+                    ", nrResponses: " + heartbeats.size() +
+                    ", distinct: " + distinct);
+            wr.write(peekSeconds + ", " + elapsed + ", " + heartbeats.size() + ", " + distinct + "\n");
+        }
+        wr.close();
+    }
+
+    private static void buildStatistics() throws Exception {
         long startTime = System.currentTimeMillis();
 
         Map<String, String> stationsSerialToDescription = getStationSerialToDescriptionMap(JsonParser.getStations());
@@ -49,7 +87,6 @@ public class ParallelRequestExecutor {
 
         long endTime = System.currentTimeMillis();
         System.out.println("time: " + (endTime - startTime));
-
     }
 
     private ParallelRequestExecutor(int poolSize) {

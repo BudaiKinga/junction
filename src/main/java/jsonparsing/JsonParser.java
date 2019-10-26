@@ -19,7 +19,7 @@ public final class JsonParser {
         return stationDataJsonModel.getList();
     }
 
-    private static List<Heartbeat> getHeartBeats(String json) {
+    public static List<Heartbeat> getHeartBeats(String json) {
         if (json == null) {
             return Collections.emptyList();
         }
