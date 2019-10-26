@@ -2,7 +2,7 @@ package jsonparsing;
 
 import lombok.Getter;
 import lombok.Setter;
-import pojo.RawPojo;
+import pojo.Heartbeat;
 
 import java.util.ArrayList;
 
@@ -10,5 +10,5 @@ import java.util.ArrayList;
 @Setter
 class RawDataJsonModel {
     private String status;
-    ArrayList<RawPojo> raw;
+    ArrayList<Heartbeat> raw;
 }

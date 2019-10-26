@@ -1,34 +1,40 @@
 package jsonparsing;
 
 import com.google.gson.Gson;
-import pojo.RawPojo;
-import pojo.StationPojo;
+import pojo.Heartbeat;
+import pojo.Station;
 
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public final class JsonParser {
 
     private static final Gson GSON = new Gson();
 
-    public static List<StationPojo> getStations() throws Exception {
+    public static List<Station> getStations() throws Exception {
         FileReader jsonFileReader = new FileReader("src\\main\\resources\\station.json");
         StationDataJsonModel stationDataJsonModel = GSON.fromJson(jsonFileReader, StationDataJsonModel.class);
         return stationDataJsonModel.getList();
     }
 
-    public static List<RawPojo> getRaw(String json) {
+    public static List<Heartbeat> getHeartBeats(String json) {
         RawDataJsonModel rawDataJsonModel = GSON.fromJson(json, RawDataJsonModel.class);
         return rawDataJsonModel.getRaw();
     }
 
-    public static List<RawPojo> getRaw(List<String> jsons) {
-        List<RawPojo> result = new ArrayList<>();
+    public static List<Heartbeat> getHeartBeats(List<String> jsons) {
+        long start = System.currentTimeMillis();
+
+        List<Heartbeat> result = new ArrayList<>();
         for (String json: jsons) {
-            result.addAll(getRaw(json));
+            result.addAll(getHeartBeats(json));
         }
+
+        long end = System.currentTimeMillis();
+        System.out.println("Parsing heartbeats took: " + ((end - start) / 1_000));
+
         return result;
+
     }
 }

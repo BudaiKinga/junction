@@ -8,8 +8,8 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import pojo.RawPojo;
-import pojo.StationPojo;
+import pojo.Heartbeat;
+import pojo.Station;
 import request.RawRequest;
 import request.Request;
 
@@ -25,12 +25,40 @@ import java.util.stream.Collectors;
 public class ParallelRequestExecutor {
 
     private final ExecutorService pool;
+    private static final int JUMP_MINUTES = 30;
+    private static final String START_TIME_STRING = "2019-08-01 08:00:00";
+    private static final String END_TIME_STRING = "2019-08-01 12:00:00";
+    private static final int PEEK_MINUTES = 1;
 
-    public ParallelRequestExecutor(int poolSize) {
+    public static void main(String[] args) throws Exception {
+        long startTime = System.currentTimeMillis();
+
+        Map<String, String> stationsSerialToDescription = getStationSerialToDescriptionMap(JsonParser.getStations());
+
+        List<Request> requests = buildCoarseGrainRequests(START_TIME_STRING, END_TIME_STRING, JUMP_MINUTES, PEEK_MINUTES);
+
+        ParallelRequestExecutor exec = new ParallelRequestExecutor(100);
+
+        List<String> jsonResponses = exec.execute(requests);
+
+        List<Heartbeat> heartbeats = JsonParser.getHeartBeats(jsonResponses);
+
+        Set<Observation> observations = getObservations(heartbeats, JUMP_MINUTES, stationsSerialToDescription);
+
+        writeTocsv(observations);
+
+        long endTime = System.currentTimeMillis();
+        System.out.println("time: " + (endTime - startTime));
+
+    }
+
+    private ParallelRequestExecutor(int poolSize) {
         pool = Executors.newFixedThreadPool(poolSize);
     }
 
-    public List<String> execute(List<Request> requests) throws InterruptedException {
+    private List<String> execute(List<Request> requests) throws InterruptedException {
+        long start = System.currentTimeMillis();
+
         List<Request> smallWinReq = getSmallWindowRequests(requests);
 
         List<Callable<String>> callables = new ArrayList<>();
@@ -39,6 +67,9 @@ public class ParallelRequestExecutor {
 
         List<Future<String>> results = pool.invokeAll(callables);
         pool.shutdown();
+
+        long end = System.currentTimeMillis();
+        System.out.println("Retrieving requests took: " + ((end - start) / 1_000));
 
         return results.stream().map(res -> {
             try {
@@ -87,11 +118,13 @@ public class ParallelRequestExecutor {
     }
 
     private static List<Request> buildCoarseGrainRequests(String startTime, String endTime, int jump, int peek) {
+        long start = System.currentTimeMillis();
+
         List<Request> result = new ArrayList<>();
         Date startDate = new Date(Timestamp.valueOf(startTime).getTime());
         Date endDate = new Date(Timestamp.valueOf(endTime).getTime());
 
-        for (Date d = startDate; d.before(endDate); d=DateUtils.addMinutes(d, jump)) {
+        for (Date d = startDate; d.before(endDate); d = DateUtils.addMinutes(d, jump)) {
             Request coarseRawRequest = new RawRequest();
             coarseRawRequest.setCommand("list");
             coarseRawRequest.setTimeStart(d);
@@ -99,49 +132,35 @@ public class ParallelRequestExecutor {
             result.add(coarseRawRequest);
         }
 
+        long end = System.currentTimeMillis();
+        System.out.println("Building coarse requests took: " + ((end - start) / 1_000));
         return result;
     }
 
-    public static void main(String[] args) throws Exception {
-        long startTime = System.currentTimeMillis();
-        List<StationPojo> stationPojos = JsonParser.getStations();
-        Map<String, String> stations = convertToStationPojos(stationPojos);
-
-        int jump = 30;
-        List<Request> requests = buildCoarseGrainRequests("2019-08-01 08:00:00", "2019-08-01 16:00:00", jump, 3);
-
-        ParallelRequestExecutor exec = new ParallelRequestExecutor(100);
-
-        List<String> jsonResponses = exec.execute(requests);
-
-        List<RawPojo> rawPojos = JsonParser.getRaw(jsonResponses);
-
-        Set<Observation> observations = getObservations(rawPojos, jump, stations);
-
-        writeTocsv(observations);
-
-        long endTime = System.currentTimeMillis();
-        System.out.println("time: " + (endTime - startTime));
-
-    }
-
-    private static Map<String, String> convertToStationPojos(List<StationPojo> stationPojos) {
+    private static Map<String, String> getStationSerialToDescriptionMap(List<Station> stationPojos) {
         Map<String, String> stations = new HashMap<>();
-        for (StationPojo sp : stationPojos) {
+        for (Station sp : stationPojos) {
             stations.put(sp.getSerial(), sp.getDescription());
         }
         return stations;
     }
 
-    private static Set<Observation> getObservations(List<RawPojo> rawPojos, int jump,  Map<String, String> stationPojos) {
+    private static Set<Observation> getObservations(List<Heartbeat> heartbeats, int jump, Map<String, String> stationPojos) {
+
+        long start = System.currentTimeMillis();
+
         Set<Observation> obs = new HashSet<>();
-        for (RawPojo pojo : rawPojos) {
+        for (Heartbeat pojo : heartbeats) {
             obs.add(convertToObs(pojo, jump, stationPojos));
         }
+
+        long end = System.currentTimeMillis();
+        System.out.println("Getting observations took: " + ((end - start) / 1_000));
+
         return obs;
     }
 
-    private static Observation convertToObs(RawPojo pojo, int jump, Map<String, String> stationPojos) {
+    private static Observation convertToObs(Heartbeat pojo, int jump, Map<String, String> stationPojos) {
         Observation observation = new Observation();
         observation.setRawHash(pojo.getHash());
         observation.setLocation(stationPojos.get(pojo.getSerial()));
@@ -162,12 +181,12 @@ public class ParallelRequestExecutor {
         wr.close();
     }
 
-    private static void topTenVisited(List<StationPojo> stations, Map<String, Set<String>> checkInCounter) {
+    private static void topTenVisited(List<Station> stations, Map<String, Set<String>> checkInCounter) {
         int nrMax = 25;
         for (int i = 0; i < nrMax; i++) {
             int max = 0;
-            StationPojo sMax = null;
-            for (StationPojo s : stations) {
+            Station sMax = null;
+            for (Station s : stations) {
                 Set<String> r = checkInCounter.get(s.getSerial());
                 if (r != null && r.size() > max) {
                     sMax = s;
@@ -179,10 +198,10 @@ public class ParallelRequestExecutor {
         }
     }
 
-    private static Map<String, Set<String>> countCheckIns(List<RawPojo> rawPojos) {
+    private static Map<String, Set<String>> countCheckIns(List<Heartbeat> heartbeats) {
         Map<String, Set<String>> checkInCounter = new HashMap<>();
 
-        for (RawPojo raw : rawPojos) {
+        for (Heartbeat raw : heartbeats) {
             Set<String> hashes = checkInCounter.get(raw.getSerial());
             if (hashes == null) {
                 hashes = new HashSet<>();

@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class StationPojo {
+public class Station {
     private String serial;
     private String address;
     private String postalcode;

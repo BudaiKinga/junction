@@ -2,7 +2,7 @@ package jsonparsing;
 
 import lombok.Getter;
 import lombok.Setter;
-import pojo.StationPojo;
+import pojo.Station;
 
 import java.util.ArrayList;
 
@@ -10,5 +10,5 @@ import java.util.ArrayList;
 @Setter
 class StationDataJsonModel {
     String status;
-    ArrayList<StationPojo> list;
+    ArrayList<Station> list;
 }
