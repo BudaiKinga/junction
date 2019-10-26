@@ -31,8 +31,69 @@ public class ParallelRequestExecutor {
     private static final int PEEK_MINUTES = 1;
 
     public static void main(String[] args) throws Exception {
-//        checkResponseGrowth();
-        buildStatistics();
+        checkResponseGrowthParallel();
+        //checkResponseGrowth();
+//        buildStatistics();
+
+    }
+
+    private static void checkResponseGrowthParallel() throws IOException, InterruptedException {
+        File csv = new File("responseGrowth_parallel.csv");
+        BufferedWriter wr = new BufferedWriter(new FileWriter(csv));
+        wr.write("peek, time, total, distinct\n");
+
+        // create pool of 100
+        ExecutorService pool = Executors.newFixedThreadPool(100);
+
+        for (int peekSeconds = 1; peekSeconds < 30; peekSeconds++) {
+            long start = System.currentTimeMillis();
+
+            List<Callable<String>> callables = new ArrayList<>();
+
+
+            for (int i = 0; i < peekSeconds; i++) {
+                Request r = new RawRequest();
+                r.setCommand("list");
+                long time = Timestamp.valueOf("2019-08-01 08:00:00").getTime() + (i*20_000);
+                long timeE = Timestamp.valueOf("2019-08-01 08:00:00").getTime() + ((i+1)*20_000);
+                r.setTimeStart(new Date(time));
+                r.setTimeStop(new Date(timeE));
+
+                callables.add(() -> {
+                    HttpPost post = r.postRequest();
+                    CloseableHttpClient client = HttpClients.createDefault();
+                    HttpResponse response = client.execute(post);
+                    return EntityUtils.toString(response.getEntity());
+                });
+            }
+
+            List<Future<String>> results = pool.invokeAll(callables);
+
+            List<String> heartbeatsString = results.stream().map(res -> {
+                try {
+                    return res.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Out of time...");
+                return null;
+            }).collect(Collectors.toList());
+
+            List<Heartbeat> heartbeats = JsonParser.getHeartBeats(heartbeatsString);
+
+
+            long end = System.currentTimeMillis();
+
+            long distinct = heartbeats.stream().map(Heartbeat::getHash).distinct().count();
+            long elapsed = (end - start);
+            System.out.println("peek: " + peekSeconds +
+                    ", time: " + elapsed +
+                    ", nrResponses: " + heartbeats.size() +
+                    ", distinct: " + distinct);
+            wr.write(peekSeconds + ", " + elapsed + ", " + heartbeats.size() + ", " + distinct + "\n");
+        }
+        wr.close();
+        pool.shutdown();
 
     }
 
