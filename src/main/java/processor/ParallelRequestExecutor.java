@@ -1,6 +1,7 @@
 package processor;
 
 import jsonparsing.JsonParser;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -11,6 +12,10 @@ import pojo.StationPojo;
 import request.RawRequest;
 import request.Request;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.*;
@@ -63,7 +68,7 @@ public class ParallelRequestExecutor {
             Request rSmall = new RawRequest();
             rSmall.setCommand(r.getCommand());
             rSmall.setTimeStart(new Date(start + i * 20 * 1000));
-            rSmall.setTimeStop(new Date(start + (i * 20000 + 2000)));
+            rSmall.setTimeStop(new Date(start + (i * 20000 + 1000)));
             list.add(rSmall);
         }
         return list;
@@ -80,37 +85,55 @@ public class ParallelRequestExecutor {
         };
     }
 
-    private static List<Request> buildCoarseGrainRequests() {
-        Request coarseRawRequest = new RawRequest();
-        coarseRawRequest.setCommand("list");
-        coarseRawRequest.setTimeStart(new Date(Timestamp.valueOf("2019-08-01 12:00:00").getTime()));
-        coarseRawRequest.setTimeStop(new Date(Timestamp.valueOf("2019-08-01 12:01:00").getTime()));
-        return new ArrayList<>(Arrays.asList(coarseRawRequest));
+    private static List<Request> buildCoarseGrainRequests(String startTime, String endTime, int jump, int peek) {
+        List<Request> result = new ArrayList<>();
+        Date startDate = new Date(Timestamp.valueOf(startTime).getTime());
+        Date endDate = new Date(Timestamp.valueOf(endTime).getTime());
+
+        for (Date d = startDate; d.before(endDate); DateUtils.addMinutes(d, jump)) {
+            Request coarseRawRequest = new RawRequest();
+            coarseRawRequest.setCommand("list");
+            coarseRawRequest.setTimeStart(d);
+            coarseRawRequest.setTimeStop(DateUtils.addMinutes(d, peek));
+            result.add(coarseRawRequest);
+        }
+
+        return result;
     }
 
     public static void main(String[] args) throws Exception {
         long startTime = System.currentTimeMillis();
         List<StationPojo> stations = JsonParser.getStations();
 
-        List<Request> requests = buildCoarseGrainRequests();
+        List<Request> requests = buildCoarseGrainRequests("2019-08-01 08:00:00", "2019-08-02 08:00:00", 30, 3);
 
-        ParallelRequestExecutor exec = new ParallelRequestExecutor(3);
+        ParallelRequestExecutor exec = new ParallelRequestExecutor(100);
 
         List<String> jsonResponses = exec.execute(requests);
 
         List<RawPojo> rawPojos = JsonParser.getRaw(jsonResponses);
 
-        Map<String, Set<String>> checkInCounter = countCheckIns(rawPojos);
 
-        topTenVisited(stations, checkInCounter);
+        //Map<String, Set<String>> checkInCounter = countCheckIns(rawPojos);
+
+        //topTenVisited(stations, checkInCounter);
+       // writeTocsv(checkInCounter, stations);
 
         long endTime = System.currentTimeMillis();
         System.out.println("time: " + (endTime - startTime));
 
     }
 
+    private static void writeTocsv(Map<String, Set<String>> checkInCounter, Set<StationPojo> stationPojos) throws IOException {
+        File csv = new File("data1.csv");
+        BufferedWriter wr = new BufferedWriter(new FileWriter(csv));
+        wr.write("description, time, nrVisitors\n");
+
+
+    }
+
     private static void topTenVisited(List<StationPojo> stations, Map<String, Set<String>> checkInCounter) {
-        int nrMax = 10;
+        int nrMax = 25;
         for (int i = 0; i < nrMax; i++) {
             int max = 0;
             StationPojo sMax = null;
