@@ -8,7 +8,7 @@ import java.util.Date;
 
 @Getter
 @Setter
-public class Request {
+public class StationRequest {
 
     private static final String BASIC_URL = "https://api.hypr.cl/station";
 
