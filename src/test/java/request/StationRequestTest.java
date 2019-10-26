@@ -9,6 +9,8 @@ import org.apache.http.util.EntityUtils;
 import java.io.InputStream;
 import java.util.Date;
 
+import static org.junit.Assert.assertEquals;
+
 public class StationRequestTest {
     @org.junit.Test
     public void postRequest() throws Exception {
@@ -26,6 +28,7 @@ public class StationRequestTest {
         String respStr = EntityUtils.toString(response.getEntity());
         InputStream content = response.getEntity().getContent();
         System.out.println(respStr);
+        assertEquals(200, response.getStatusLine().getStatusCode());
 
     }
 }
