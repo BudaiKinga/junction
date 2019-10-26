@@ -7,7 +7,7 @@ import java.util.Date;
 
 @Getter
 @Setter
-public class RawRequestPojo {
+public class RawPojo {
     private Date time;
     private String serial;
     private float latitude;

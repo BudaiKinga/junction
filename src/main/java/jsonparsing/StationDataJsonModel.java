@@ -1,12 +1,14 @@
 package jsonparsing;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import pojo.StationPojo;
 
 import java.util.ArrayList;
 
-@Data
-public class StationFileModel {
+@Getter
+@Setter
+class StationDataJsonModel {
     String status;
     ArrayList<StationPojo> list;
 }
