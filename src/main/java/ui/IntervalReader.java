@@ -1,3 +1,5 @@
+package ui;
+
 import jsonparsing.JsonParser;
 import model.Observation;
 import pojo.Heartbeat;
@@ -18,14 +20,6 @@ import static processor.ParallelRequestExecutor.STOP;
 public class IntervalReader {
 
     private static final ParallelRequestExecutor executor = new ParallelRequestExecutor(100);
-
-    public static void main(String[] args) throws Exception {
-        // 10s peek whole day coverage
-        String START_TIME_STRING = "2019-08-01 08:00:00";
-        String END_TIME_STRING = "2019-08-01 11:30:00";
-        Set<Observation> observations = getRawDataBetweenInterval(START_TIME_STRING, END_TIME_STRING);
-        IOUtil.writeTocsv(observations, START_TIME_STRING);
-    }
 
     public static Set<Observation> getRawDataBetweenInterval(String startTime, String endTime) throws InterruptedException, IOException, ParseException {
         List<Request> requests = Benchmark.buildCoarseGrainRequestsBySecond(startTime, endTime, 10, 10);
